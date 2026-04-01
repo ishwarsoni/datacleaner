@@ -42,8 +42,7 @@ htmlcov/
 .ipynb_checkpoints/
 
 # IDE/editor
-.vscode/*
-!.vscode/settings.json
+.vscode/
 .idea/
 
 # OS files
