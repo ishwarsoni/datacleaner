@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datacleanr"
+version = "0.1.2"
+description = "Clean messy real-world datasets with safe, explainable defaults before ML."
+readme = "README.md"
+authors = [{name = "Ishwar Soni"}]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+  "pandas",
+  "numpy"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
