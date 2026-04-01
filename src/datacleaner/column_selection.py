@@ -24,6 +24,7 @@ def _safe_nunique(series: pd.Series, dropna: bool) -> int:
 def drop_useless_columns(
     df: pd.DataFrame,
     unique_ratio_threshold: float = 0.98,
+    target_column: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Drop low-information columns using simple, safe heuristics.
 
@@ -58,6 +59,9 @@ def drop_useless_columns(
 
     for column_name in cleaned_df.columns.tolist():
         try:
+            if target_column is not None and column_name == target_column:
+                continue
+
             series = cleaned_df[column_name]
             unique_count_including_null = _safe_nunique(series, dropna=False)
 

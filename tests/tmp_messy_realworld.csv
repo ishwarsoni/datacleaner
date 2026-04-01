@@ -1,0 +1,7 @@
+SalePrice,LotArea,Neighborhood,MiscVal,PctDone
+200000.0,8450,CollgCr,0,90%
+180000.0,9600,Veenker,,80%
+250000.0,11250,CollgCr,0,100%
+,9550,,0,75%
+300000.0,14260,NoRidge,500,
+220000.0,14115,Mitchel,0,85%

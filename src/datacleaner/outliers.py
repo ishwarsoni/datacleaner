@@ -18,6 +18,7 @@ def _iqr_bounds(series: pd.Series) -> tuple[float, float]:
 def handle_outliers(
     df: pd.DataFrame,
     method: str = "cap",
+    target_column: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Handle IQR-based outliers in numeric columns.
 
@@ -39,9 +40,12 @@ def handle_outliers(
 
     cleaned_df = df.copy()
     numeric_columns = cleaned_df.select_dtypes(include="number").columns.tolist()
+    processed_numeric_columns = [
+        column_name for column_name in numeric_columns if target_column is None or column_name != target_column
+    ]
 
-    if not numeric_columns:
-        changes: dict[str, Any] = {"columns_analyzed": numeric_columns}
+    if not processed_numeric_columns:
+        changes: dict[str, Any] = {"columns_analyzed": processed_numeric_columns}
         if method == "remove":
             changes["rows_removed"] = 0
         else:
@@ -53,7 +57,7 @@ def handle_outliers(
 
     if method == "remove":
         outlier_row_mask = pd.Series(False, index=cleaned_df.index)
-        for column_name in numeric_columns:
+        for column_name in processed_numeric_columns:
             lower_bound, upper_bound = _iqr_bounds(cleaned_df[column_name])
 
             column_outlier_mask = (cleaned_df[column_name] < lower_bound) | (cleaned_df[column_name] > upper_bound)
@@ -63,7 +67,7 @@ def handle_outliers(
         cleaned_df = cleaned_df.loc[~outlier_row_mask].copy()
 
         changes = {
-            "columns_analyzed": numeric_columns,
+            "columns_analyzed": processed_numeric_columns,
             "rows_removed": rows_removed,
         }
         return cleaned_df, changes
@@ -72,7 +76,7 @@ def handle_outliers(
     capped_percentage_per_column: dict[str, float] = {}
     high_capping_columns: list[str] = []
 
-    for column_name in numeric_columns:
+    for column_name in processed_numeric_columns:
         lower_bound, upper_bound = _iqr_bounds(cleaned_df[column_name])
 
         lower_mask = cleaned_df[column_name] < lower_bound
@@ -89,7 +93,7 @@ def handle_outliers(
         cleaned_df[column_name] = cleaned_df[column_name].clip(lower=lower_bound, upper=upper_bound)
 
     changes = {
-        "columns_analyzed": numeric_columns,
+        "columns_analyzed": processed_numeric_columns,
         "values_capped": values_capped,
         "capped_percentage_per_column": capped_percentage_per_column,
         "high_capping_columns": high_capping_columns,
@@ -104,6 +108,7 @@ def handle_outliers(
 def clean_outliers(
     df: pd.DataFrame,
     method: str = "cap",
+    target_column: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Backward-compatible wrapper for handle_outliers."""
-    return handle_outliers(df, method=method)
+    return handle_outliers(df, method=method, target_column=target_column)

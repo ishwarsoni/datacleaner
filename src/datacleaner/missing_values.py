@@ -50,7 +50,10 @@ def _safe_mode(series: pd.Series) -> Any:
     return None
 
 
-def handle_missing(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+def handle_missing(
+    df: pd.DataFrame,
+    target_column: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Handle missing values with column drop and median/mode fill rules.
 
     Args:
@@ -68,12 +71,16 @@ def handle_missing(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
     cleaned_df = df.copy()
     for column_name in cleaned_df.select_dtypes(include=["object", "string"]).columns:
         try:
+            if target_column is not None and column_name == target_column:
+                continue
             cleaned_df[column_name] = _normalize_placeholders(cleaned_df[column_name])
         except Exception:
             continue
 
     missing_ratio = cleaned_df.isna().mean()
     columns_dropped = missing_ratio[missing_ratio > 0.40].index.tolist()
+    if target_column is not None:
+        columns_dropped = [column_name for column_name in columns_dropped if column_name != target_column]
     if columns_dropped:
         cleaned_df = cleaned_df.drop(columns=columns_dropped)
 
@@ -84,6 +91,8 @@ def handle_missing(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
     method_used: dict[str, str] = {}
 
     for column_name in numeric_cols:
+        if target_column is not None and column_name == target_column:
+            continue
         before_missing = int(cleaned_df[column_name].isna().sum())
         if before_missing == 0:
             continue
@@ -96,6 +105,8 @@ def handle_missing(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
         method_used[column_name] = "median"
 
     for column_name in categorical_cols:
+        if target_column is not None and column_name == target_column:
+            continue
         before_missing = int(cleaned_df[column_name].isna().sum())
         if before_missing == 0:
             continue
@@ -117,6 +128,9 @@ def handle_missing(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
     return cleaned_df, changes
 
 
-def clean_missing_values(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+def clean_missing_values(
+    df: pd.DataFrame,
+    target_column: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Backward-compatible wrapper for handle_missing."""
-    return handle_missing(df)
+    return handle_missing(df, target_column=target_column)

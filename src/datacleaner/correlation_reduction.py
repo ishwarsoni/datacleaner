@@ -14,6 +14,7 @@ MAX_DROP_FRACTION = 0.5
 def remove_correlated_features(
     df: pd.DataFrame,
     threshold: float = 0.9,
+    target_column: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Drop highly correlated numeric features using a simple threshold rule.
 
@@ -63,6 +64,10 @@ def remove_correlated_features(
     for column_name in upper_triangle.columns:
         correlated_with = upper_triangle.index[upper_triangle[column_name] > safe_threshold].tolist()
         for other_column in correlated_with:
+            if target_column is not None and (
+                column_name == target_column or other_column == target_column
+            ):
+                continue
             correlated_pairs.append(
                 {
                     "feature_a": other_column,
@@ -70,7 +75,14 @@ def remove_correlated_features(
                     "correlation": float(upper_triangle.at[other_column, column_name]),
                 }
             )
-        if correlated_with:
+        if target_column is not None and column_name == target_column:
+            continue
+        filtered_correlated_with = (
+            [col for col in correlated_with if col != target_column]
+            if target_column is not None
+            else correlated_with
+        )
+        if filtered_correlated_with:
             candidate_drops.append(column_name)
 
     max_allowed_drops = max(0, int(len(numeric_columns) * MAX_DROP_FRACTION))

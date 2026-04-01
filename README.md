@@ -1,101 +1,97 @@
-# datacleaner
+# datacleaner - ML-safe data cleaning library
 
-Production-grade, explainable data cleaning for messy real-world datasets.
+datacleaner cleans messy real-world tabular datasets with safe defaults, explicit behavior, and explainable outputs.
+It is designed for ML workflows where target integrity matters: the main clean pipeline does not modify the target column when target_column is provided.
 
-`datacleaner` provides a conservative default pipeline that improves data quality while minimizing risky transformations.
+## Key Features
 
-## Install
+- Safe cleaning pipeline with defensive guards
+- Target column protection across all cleaning steps
+- Explicit target handling via handle_target()
+- Real-world numeric parsing support (currency symbols, percentages, commas)
+- Outlier handling with cap/remove strategies
+- Column reduction with safety rollbacks
+- Detailed report with shape and integrity metadata
+- Validated on 30+ datasets across classification and regression
 
-```bash
-pip install datacleanr
-```
+## Installation
 
-- PyPI package name: `datacleanr`
-- Import name: `datacleaner`
-- PyPI: https://pypi.org/project/datacleanr/
+    pip install datacleanr
 
-## Why datacleaner
+Package name on PyPI: datacleanr
+Import name in code: datacleaner
 
-- Safe defaults that avoid aggressive data mutation
-- Transparent step-wise reporting for auditability
-- Defensive behavior for noisy, mixed-quality production data
-- Drop-in usage with pandas DataFrames
+## Quick Example
 
-## Core Pipeline
+    from datacleaner import handle_target, clean
 
-The default `clean(df)` flow runs in this order:
+    df, target_meta = handle_target(df, "target")
+    cleaned_df, report = clean(df, target_column="target", return_report=True)
 
-1. Missing value handling
-2. Duplicate removal
-3. Datatype inference and conversion
-4. Outlier treatment
-5. Text standardization
-6. Low-information column selection
-7. Correlation reduction
-8. Safety checks and optional rollbacks
+## Target Handling
 
-## Quick Start
+Why target is not modified automatically:
+- In supervised ML, target values are labels. Silent mutation can corrupt training targets.
+- The main clean function is intentionally conservative and avoids target rewrites.
 
-```python
-from datacleaner import analyze, clean
+How to use handle_target:
+- Use handle_target before clean when target contains missing values.
+- This function is explicit and returns transparent metadata about what it did.
 
-# Optional read-only diagnostics before cleaning
-analysis = analyze(df)
+Safe defaults:
+- strategy="auto" defaults to dropping rows with missing target
+- If target missing ratio is above threshold, rows are dropped regardless of strategy
+- Fill is only used for low-missing targets when explicitly requested
 
-# Production-safe cleaning with report output
-cleaned_df, report = clean(
-    df,
-    return_report=True,
-    outlier_method="cap",  # or "remove"
-    verbose=False,
-    safe_mode=True,
-)
+Returned metadata fields:
+- target_missing_ratio
+- action: none | rows_dropped | filled
+- rows_removed
+- fill_value (only when action is filled)
+- filled_count (only when action is filled)
 
-print(df.shape, "->", cleaned_df.shape)
-print(report["summary"]["actions_summary"])
-```
+## Pipeline Overview
 
-## API
+clean runs this sequence:
 
-### clean(df, return_report=True, outlier_method="cap", verbose=False, safe_mode=True)
+1. missing value handling
+2. duplicate removal
+3. datatype cleaning
+4. outlier handling
+5. text standardization
+6. column selection
+7. correlation reduction
+8. safety checks and reporting
 
-Runs the full cleaning pipeline.
+## Example Report Output
 
-- Input: pandas DataFrame (or DataFrame-like object)
-- Output when `return_report=True`: `(cleaned_df, report)`
-- Output when `return_report=False`: `cleaned_df`
+    {
+      "final_shape": [1200, 24],
+      "rows_removed_pct": 2.5,
+      "columns_removed_pct": 8.3,
+      "integrity_warnings": []
+    }
 
-### analyze(df)
+## Validation
 
-Performs pre-cleaning analysis without modifying data.
+- Tested on 30+ datasets from multiple domains
+- Includes classification and regression datasets
+- Includes noisy variants with missing values, mixed text/number fields, currency, percentages, and comma-formatted numerics
+- No target corruption observed with target_column protection and explicit handle_target preprocessing
+- No crash regressions in stress validation
 
-- Returns column metadata, missing-value percentages, uniqueness, and quality warnings.
+## Design Philosophy
 
-## Reporting
+- Conservative over aggressive
+- Transparency over automation
+- Safety over convenience
 
-When `return_report=True`, the report includes:
+## Future Improvements
 
-- `steps`: per-step operation details
-- `summary`: consolidated actions and diagnostics
-- `safety`: data-loss metrics, warnings, and rollback details
-
-This makes cleaning behavior traceable and easier to review in pipelines and model governance workflows.
-
-## Design Principles
-
-- Conservative conversion thresholds for mixed data
-- Explainability over black-box transformations
-- Graceful handling of malformed inputs
-- Stability under stress-tested messy data scenarios
-
-## Contributing
-
-Contributions are welcome.
-
-1. Open an issue for bug reports or major changes.
-2. Add tests for behavioral changes.
-3. Keep changes backward-compatible with current API contracts.
+- Configurable policy profiles per domain
+- More advanced locale-aware numeric parsing
+- Benchmarking against common sklearn preprocessing baselines
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+MIT License. See LICENSE.
