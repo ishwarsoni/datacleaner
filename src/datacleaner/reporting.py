@@ -33,6 +33,7 @@ def generate_report(report_dict: dict[str, Any]) -> dict[str, Any]:
     correlation_reduction_report = _as_dict(report_dict.get("correlation_reduction", {}))
     column_selection_report = _as_dict(report_dict.get("column_selection", {}))
     outliers_report = _as_dict(report_dict.get("outliers", {}))
+    skewness_report = _as_dict(report_dict.get("skewness", {}))
     analysis_report = _as_dict(report_dict.get("analysis", {}))
     analysis_warnings = _as_dict(analysis_report.get("warnings", {}))
 
@@ -57,6 +58,16 @@ def generate_report(report_dict: dict[str, Any]) -> dict[str, Any]:
         "capped_percentage_per_column": outliers_report.get("capped_percentage_per_column", {}),
         "high_capping_columns": outliers_report.get("high_capping_columns", []),
     }
+    skewness_summary = {
+        "method": skewness_report.get("method", "log"),
+        "threshold": skewness_report.get("threshold", 1.0),
+        "columns_transformed": skewness_report.get("columns_transformed", []),
+        "details": skewness_report.get("details", {}),
+        "original_skewness": skewness_report.get("original_skewness", {}),
+        "transformed_skewness": skewness_report.get("transformed_skewness", {}),
+        "method_used_per_column": skewness_report.get("method_used_per_column", {}),
+        "skipped_columns": skewness_report.get("skipped_columns", {}),
+    }
 
     numeric_candidate_columns = analysis_warnings.get("numeric_candidate_columns", [])
     if not numeric_candidate_columns:
@@ -67,6 +78,7 @@ def generate_report(report_dict: dict[str, Any]) -> dict[str, Any]:
         "pairs_checked": correlation_reduction_report.get("pairs_checked", 0),
         "high_outlier_capping_columns": outlier_summary.get("high_capping_columns", []),
         "numeric_candidate_columns": numeric_candidate_columns,
+        "skewed_columns_transformed": skewness_summary.get("columns_transformed", []),
     }
 
     missing_percentage_map = _as_dict(analysis_report.get("missing_values_percentage", {}))
@@ -93,6 +105,7 @@ def generate_report(report_dict: dict[str, Any]) -> dict[str, Any]:
         "correlated_features_removed": len(correlated_features_removed),
         "outlier_rows_removed": outlier_summary.get("rows_removed", 0),
         "outlier_values_capped": outlier_summary.get("values_capped", 0),
+        "skewed_columns_transformed": len(skewness_summary.get("columns_transformed", [])),
     }
 
     return {
@@ -110,6 +123,7 @@ def generate_report(report_dict: dict[str, Any]) -> dict[str, Any]:
             "drop_reasons": column_selection_report.get("drop_reasons", {}),
         },
         "outlier_handling_summary": outlier_summary,
+        "skewness_summary": skewness_summary,
         "diagnostics": diagnostics,
         "warnings_and_insights": warnings_and_insights,
         "actions_summary": actions_summary,

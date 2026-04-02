@@ -21,6 +21,40 @@ def _safe_nunique(series: pd.Series, dropna: bool) -> int:
         return int(normalized.nunique(dropna=dropna))
 
 
+def _max_abs_correlation_to_numeric(
+    df: pd.DataFrame,
+    column_name: str,
+    target_column: str | None,
+) -> float | None:
+    """Return max absolute correlation of column to numeric peers, when computable."""
+    candidate = pd.to_numeric(df[column_name], errors="coerce")
+    if candidate.notna().sum() < 3:
+        return None
+
+    numeric_columns = [
+        other_name
+        for other_name in df.select_dtypes(include="number").columns.tolist()
+        if other_name != column_name and (target_column is None or other_name != target_column)
+    ]
+    if not numeric_columns:
+        return None
+
+    max_corr: float | None = None
+    for other_name in numeric_columns:
+        other = pd.to_numeric(df[other_name], errors="coerce")
+        if other.notna().sum() < 3:
+            continue
+
+        corr = candidate.corr(other)
+        if pd.isna(corr):
+            continue
+
+        abs_corr = abs(float(corr))
+        max_corr = abs_corr if max_corr is None else max(max_corr, abs_corr)
+
+    return max_corr
+
+
 def drop_useless_columns(
     df: pd.DataFrame,
     unique_ratio_threshold: float = 0.98,
@@ -75,9 +109,14 @@ def drop_useless_columns(
 
             unique_count_excluding_null = _safe_nunique(series, dropna=True)
             unique_ratio = unique_count_excluding_null / total_rows
-            if unique_ratio > safe_threshold:
-                dropped_columns.append(column_name)
-                dropped_reasons[column_name] = "likely_id_column"
+            if unique_ratio >= safe_threshold:
+                is_very_high_unique = unique_ratio > 0.95
+                max_corr = _max_abs_correlation_to_numeric(cleaned_df, column_name, target_column)
+                low_correlation_signal = max_corr is None or max_corr < 0.05
+
+                if is_very_high_unique and low_correlation_signal:
+                    dropped_columns.append(column_name)
+                    dropped_reasons[column_name] = "likely_id_low_signal"
         except Exception:
             continue
 

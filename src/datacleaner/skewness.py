@@ -12,6 +12,7 @@ def handle_skewness(
     df: pd.DataFrame,
     threshold: float = 1.0,
     method: str = "log",
+    target_column: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Apply optional skewness correction to highly skewed numeric columns.
 
@@ -47,9 +48,15 @@ def handle_skewness(
     transformed_columns: list[str] = []
     original_skewness: dict[str, float] = {}
     skipped_columns: dict[str, str] = {}
+    transformed_skewness: dict[str, float] = {}
+    method_used_per_column: dict[str, str] = {}
+    details: dict[str, dict[str, Any]] = {}
 
     for column_name in numeric_columns:
         try:
+            if target_column is not None and column_name == target_column:
+                continue
+
             numeric_series = pd.to_numeric(cleaned_df[column_name], errors="coerce")
             if numeric_series.notna().sum() < 2:
                 continue
@@ -64,20 +71,31 @@ def handle_skewness(
             original_skewness[column_name] = skew_value
 
             if safe_method == "log":
-                # log1p requires values >= 0
-                if (numeric_series.dropna() < 0).any():
-                    skipped_columns[column_name] = "negative_values_not_allowed_for_log"
-                    continue
-                transformed_series = np.log1p(numeric_series)
+                # Signed log handles positive, negative, and mixed values safely.
+                transformed_series = np.sign(numeric_series) * np.log1p(np.abs(numeric_series))
             else:
-                # sqrt requires values >= 0
-                if (numeric_series.dropna() < 0).any():
-                    skipped_columns[column_name] = "negative_values_not_allowed_for_sqrt"
-                    continue
-                transformed_series = np.sqrt(numeric_series)
+                transformed_series = np.sign(numeric_series) * np.sqrt(np.abs(numeric_series))
+
+            finite_mask = np.isfinite(transformed_series) | transformed_series.isna()
+            if not bool(finite_mask.all()):
+                skipped_columns[column_name] = "non_finite_values_generated"
+                continue
+
+            transformed_skew = float(pd.to_numeric(transformed_series, errors="coerce").dropna().skew())
+            if not np.isnan(transformed_skew) and abs(transformed_skew) >= abs(skew_value):
+                skipped_columns[column_name] = "skew_not_improved"
+                continue
 
             cleaned_df[column_name] = transformed_series
             transformed_columns.append(column_name)
+            if not np.isnan(transformed_skew):
+                transformed_skewness[column_name] = transformed_skew
+            method_used_per_column[column_name] = safe_method
+            details[column_name] = {
+                "before": skew_value,
+                "after": transformed_skew,
+                "method": safe_method,
+            }
         except Exception as exc:
             skipped_columns[column_name] = f"transformation_failed: {exc}"
             continue
@@ -87,6 +105,9 @@ def handle_skewness(
         "threshold": safe_threshold,
         "columns_transformed": transformed_columns,
         "original_skewness": original_skewness,
+        "transformed_skewness": transformed_skewness,
+        "method_used_per_column": method_used_per_column,
+        "details": details,
         "skipped_columns": skipped_columns,
     }
     return cleaned_df, changes

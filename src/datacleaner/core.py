@@ -13,6 +13,7 @@ from .duplicates import remove_duplicates
 from .missing_values import handle_missing
 from .outliers import handle_outliers
 from .reporting import generate_report
+from .skewness import handle_skewness
 from .text_standardization import standardize_text
 
 
@@ -98,9 +99,7 @@ def clean(
 
     def _guard_step(step_name: str, previous_df: pd.DataFrame, candidate_df: pd.DataFrame) -> pd.DataFrame:
         row_loss_pct, col_loss_pct = _loss_pct(candidate_df)
-        current_cols = len(candidate_df.columns)
-        enforce_col_guard = initial_cols > 5 and current_cols > 1
-        exceeded = (row_loss_pct > 30) or (enforce_col_guard and col_loss_pct > 30)
+        exceeded = (row_loss_pct > 30) or (initial_cols > 0 and col_loss_pct > 30)
         if not exceeded:
             return candidate_df
 
@@ -126,6 +125,7 @@ def clean(
     correlation_reduction_report: dict[str, Any] = {}
     column_selection_report: dict[str, Any] = {}
     outliers_report: dict[str, Any] = {}
+    skewness_report: dict[str, Any] = {}
 
     try:
         previous_df = cleaned_df
@@ -177,7 +177,10 @@ def clean(
         print(f"Duplicates: removed {duplicates_removed} rows.")
 
     try:
-        cleaned_df, datatypes_report = fix_types(cleaned_df)
+        cleaned_df, datatypes_report = fix_types(
+            cleaned_df,
+            target_column=safe_target_column,
+        )
     except Exception as exc:
         datatypes_report = {"error": str(exc)}
 
@@ -251,6 +254,20 @@ def clean(
         else:
             print(f"Outliers ({safe_outlier_method}): capped {outliers_report.get('values_capped', 0)} values.")
 
+    try:
+        cleaned_df, skewness_report = handle_skewness(
+            cleaned_df,
+            threshold=1.0,
+            method="log",
+            target_column=safe_target_column,
+        )
+    except Exception as exc:
+        skewness_report = {"error": str(exc)}
+
+    if safe_verbose:
+        transformed_count = len(skewness_report.get("columns_transformed", []))
+        print(f"Skewness: transformed {transformed_count} columns.")
+
     # Final hard guards: target presence, valid schema, and non-empty column set.
     if safe_target_column is not None and original_target_series is not None:
         assert safe_target_column in cleaned_df.columns, f"Target column '{safe_target_column}' was removed"
@@ -318,6 +335,7 @@ def clean(
         "correlation_reduction": correlation_reduction_report,
         "column_selection": column_selection_report,
         "outliers": outliers_report,
+        "skewness": skewness_report,
     }
 
     report = {

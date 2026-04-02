@@ -1,96 +1,165 @@
-# datacleaner - ML-safe data cleaning library
+# datacleaner
 
-datacleaner cleans messy real-world tabular datasets with safe defaults, explicit behavior, and explainable outputs.
-It is designed for ML workflows where target integrity matters: the main clean pipeline does not modify the target column when target_column is provided.
+ML-safe data cleaning library for real-world datasets.
 
-## Key Features
+## 🚀 Overview
 
-- Safe cleaning pipeline with defensive guards
-- Target column protection across all cleaning steps
+A production-grade Python library that cleans messy datasets using safe, explainable defaults.
+
+- Prevents over-cleaning
+- Preserves target column
+- Provides transparent transformations
+- Tested on 50 datasets
+
+## 🔥 Key Features
+
+- Full cleaning pipeline
+- Target column NEVER modified in clean()
 - Explicit target handling via handle_target()
-- Real-world numeric parsing support (currency symbols, percentages, commas)
-- Outlier handling with cap/remove strategies
-- Column reduction with safety rollbacks
-- Detailed report with shape and integrity metadata
-- Validated on 30+ datasets across classification and regression
+- Smart datatype conversion (₹, %, commas)
+- Outlier handling with safeguards
+- Skewness handling (only when beneficial)
+- Conservative column selection (no aggressive drops)
+- Correlation reduction (no cascade deletion)
+- Safety guards (row/column loss control)
+- Detailed report output
+- Validated on 50 datasets
 
-## Installation
+## 📦 Installation
 
-    pip install datacleanr
+```bash
+pip install datacleanr
+```
 
 Package name on PyPI: datacleanr
+
 Import name in code: datacleaner
 
-## Quick Example
+## ⚡ Quick Example
 
-    from datacleaner import handle_target, clean
+```python
+from datacleaner import clean, handle_target
 
-    df, target_meta = handle_target(df, "target")
-    cleaned_df, report = clean(df, target_column="target", return_report=True)
+df, target_report = handle_target(df, "target", strategy="auto")
 
-## Target Handling
+cleaned_df, report = clean(df, target_column="target", return_report=True)
+```
 
-Why target is not modified automatically:
-- In supervised ML, target values are labels. Silent mutation can corrupt training targets.
-- The main clean function is intentionally conservative and avoids target rewrites.
+## 🎯 Target Handling
 
-How to use handle_target:
-- Use handle_target before clean when target contains missing values.
-- This function is explicit and returns transparent metadata about what it did.
+## 🎯 Target Handling (IMPORTANT)
 
-Safe defaults:
-- strategy="auto" defaults to dropping rows with missing target
-- If target missing ratio is above threshold, rows are dropped regardless of strategy
-- Fill is only used for low-missing targets when explicitly requested
+The `clean()` function **never modifies the target column**.
 
-Returned metadata fields:
-- target_missing_ratio
-- action: none | rows_dropped | filled
-- rows_removed
-- fill_value (only when action is filled)
-- filled_count (only when action is filled)
+This is intentional to ensure:
 
-## Pipeline Overview
+- no label corruption
+- safe usage in ML pipelines
+- predictable behavior
 
-clean runs this sequence:
+### Why?
 
-1. missing value handling
-2. duplicate removal
-3. datatype cleaning
-4. outlier handling
-5. text standardization
-6. column selection
-7. correlation reduction
-8. safety checks and reporting
+In real-world ML workflows:
 
-## Example Report Output
+- filling or modifying target values can introduce bias
+- automatic changes to labels are unsafe
 
-    {
-      "final_shape": [1200, 24],
-      "rows_removed_pct": 2.5,
-      "columns_removed_pct": 8.3,
-      "integrity_warnings": []
+### How to handle target values?
+
+Use the dedicated function:
+
+```python
+from datacleaner import handle_target
+
+df, target_report = handle_target(df, "target", strategy="auto")
+```
+
+### Behavior:
+
+- If missing values are small -> optional fill (controlled)
+- If missing values are large -> rows are dropped
+- Fully transparent (reports actions taken)
+
+### ⚠️ Important
+
+If you skip `handle_target()`:
+
+- target column will remain unchanged
+- missing values in target will NOT be handled
+
+This design ensures full user control over label processing.
+
+## 📊 Skew Handling
+
+- Applied ONLY when it improves distribution
+- Safe for negative values
+- Never applied to target
+- Fully transparent
+
+Example:
+
+```json
+{
+    "feature": {
+        "before": 1.14,
+        "after": 0.05,
+        "method": "log"
     }
+}
+```
 
-## Validation
+## 🧠 Feature Selection
 
-- Tested on 30+ datasets from multiple domains
-- Includes classification and regression datasets
-- Includes noisy variants with missing values, mixed text/number fields, currency, percentages, and comma-formatted numerics
-- No target corruption observed with target_column protection and explicit handle_target preprocessing
-- No crash regressions in stress validation
+- Avoids dropping useful columns
+- Prevents cascade correlation deletion
+- Keeps column loss controlled, with validation showing no dataset above 25% clean-stage column loss
 
-## Design Philosophy
+## 📈 Validation (IMPORTANT)
+
+- Tested on 50 datasets
+- Real datasets + synthetic + edge cases
+- 0 failures
+- 0 target corruption
+- Stable across all scenarios
+
+Validation artifact: [tests/validation_50_results.json](tests/validation_50_results.json)
+
+## 📷 Screenshots
+
+![Before After](assets/before_after.png)
+![Report](assets/report.png)
+![Skew](assets/skew.png)
+
+## 📄 Report Example
+
+```json
+{
+    "final_shape": [rows, columns],
+    "rows_removed_pct": 2.5,
+    "columns_removed_pct": 8.3,
+    "integrity_warnings": [],
+    "skewness_summary": {
+        "columns_transformed": ["feature_x"],
+        "details": {
+            "feature_x": {
+                "before": 1.14,
+                "after": 0.05,
+                "method": "log"
+            }
+        }
+    }
+}
+```
+
+## ⚙️ Design Philosophy
 
 - Conservative over aggressive
 - Transparency over automation
 - Safety over convenience
 
-## Future Improvements
+## 🏷 Version
 
-- Configurable policy profiles per domain
-- More advanced locale-aware numeric parsing
-- Benchmarking against common sklearn preprocessing baselines
+v0.1.3
 
 ## License
 

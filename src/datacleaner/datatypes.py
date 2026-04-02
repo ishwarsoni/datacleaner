@@ -62,11 +62,15 @@ def _looks_date_like(series: pd.Series) -> bool:
     return bool(match_ratio >= 0.6)
 
 
-def fix_types(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+def fix_types(
+    df: pd.DataFrame,
+    target_column: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Safely convert numeric-like and datetime-like text columns.
 
     Args:
         df: Input pandas DataFrame.
+        target_column: Optional target column to leave untouched.
 
     Returns:
         A tuple containing the cleaned DataFrame and conversion metadata.
@@ -88,6 +92,8 @@ def fix_types(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
 
     for column_name in object_like_cols:
         try:
+            if target_column is not None and column_name == target_column:
+                continue
             source_series = cleaned_df[column_name]
             (
                 numeric_candidate,
@@ -151,6 +157,9 @@ def fix_types(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
     return cleaned_df, changes
 
 
-def clean_datatypes(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+def clean_datatypes(
+    df: pd.DataFrame,
+    target_column: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Backward-compatible wrapper for fix_types."""
-    return fix_types(df)
+    return fix_types(df, target_column=target_column)
