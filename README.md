@@ -45,8 +45,6 @@ df, target_report = handle_target(df, "target", strategy="auto")
 cleaned_df, report = clean(df, target_column="target", return_report=True)
 ```
 
-## 🎯 Target Handling
-
 ## 🎯 Target Handling (IMPORTANT)
 
 The `clean()` function **never modifies the target column**.
@@ -159,8 +157,8 @@ Validation artifact: [tests/validation_50_results.json](tests/validation_50_resu
 
 ## 🏷 Version
 
-v0.1.3
+v0.1.4
 
 ## License
 
-MIT License. See LICENSE.
+MIT License. See [LICENSE](LICENSE).
