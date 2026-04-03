@@ -4,12 +4,19 @@ ML-safe data cleaning library for real-world datasets.
 
 ## 🚀 Overview
 
-A production-grade Python library that cleans messy datasets using safe, explainable defaults.
+A production-grade Python library for cleaning messy datasets with safe, explainable defaults.
 
 - Prevents over-cleaning
 - Preserves target column
 - Provides transparent transformations
 - Tested on 50 datasets
+
+## Why this library?
+
+- Many cleaners over-clean data and can accidentally corrupt labels.
+- `datacleaner` is designed for ML-safe preprocessing with conservative defaults.
+- Target handling is explicit and separated from general cleaning.
+- Every major action is reported for control and traceability.
 
 ## 🔥 Key Features
 
@@ -31,17 +38,21 @@ A production-grade Python library that cleans messy datasets using safe, explain
 pip install datacleanr
 ```
 
-Package name on PyPI: datacleanr
+PyPI package name: `datacleanr`
 
-Import name in code: datacleaner
+Import name in Python code: `datacleaner`
+
+The package is published as `datacleanr` on PyPI, but imported as `datacleaner` in code.
 
 ## ⚡ Quick Example
 
 ```python
 from datacleaner import clean, handle_target
 
+# handle_target() processes missing target labels safely and returns an action report.
 df, target_report = handle_target(df, "target", strategy="auto")
 
+# clean() returns the cleaned dataframe plus a structured transformation report.
 cleaned_df, report = clean(df, target_column="target", return_report=True)
 ```
 
@@ -114,21 +125,36 @@ Example:
 
 ## 📈 Validation (IMPORTANT)
 
-- Tested on 50 datasets
-- Real datasets + synthetic + edge cases
-- 0 failures
+- Tested across 50 datasets (classification and regression)
+- Includes real datasets, synthetic noisy datasets, and edge cases (including small datasets)
+- 0 failures across 50 datasets
 - 0 target corruption
 - Stable across all scenarios
 
 Validation artifact: [tests/validation_50_results.json](tests/validation_50_results.json)
 
+## 🎯 Example Datasets Tested
+
+- Ames Housing
+- Iris
+- Breast Cancer
+- Synthetic noisy datasets
+- Small edge-case datasets
+
 ## 📷 Screenshots
 
-![Before After](assets/before_after.png)
-![Report](assets/report.png)
-![Skew](assets/skew.png)
+- Before vs After cleaning
+![Before vs After cleaning](assets/before_after.png)
+
+- Cleaning report output
+![Cleaning report output](assets/report.png)
+
+- Skew transformation example
+![Skew transformation example](assets/skew.png)
 
 ## 📄 Report Example
+
+This is a simplified example of the structured report returned by `clean()`:
 
 ```json
 {
@@ -148,6 +174,19 @@ Validation artifact: [tests/validation_50_results.json](tests/validation_50_resu
     }
 }
 ```
+
+## 🧠 When to Use / When NOT to Use
+
+Use when:
+
+- datasets are messy and real-world
+- you need safe preprocessing before ML training
+- you want transparent, structured cleaning reports
+
+Avoid when:
+
+- data is already clean and standardized
+- you need heavily customized, domain-specific cleaning rules
 
 ## ⚙️ Design Philosophy
 
